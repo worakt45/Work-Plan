@@ -1,0 +1,646 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, Trash2, Plus, LayoutList, BarChart3, Moon, Sun, Menu, X, Printer, FileText, MapPin, User, Settings, CalendarRange } from 'lucide-react';
+
+const ConstructionSchedule = () => {
+  // --- Configuration & State ---
+  const [lang, setLang] = useState('th'); // th, en, zh
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'gantt'
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); // Toggle for schedule settings
+
+  // Project Details State (Includes Schedule Range now)
+  const [projectInfo, setProjectInfo] = useState({
+    name: '',
+    owner: '',
+    location: '',
+    startDate: '2026-01-02',
+    endDate: '2026-01-30'
+  });
+
+  // Translation Dictionary
+  const t = {
+    th: {
+      title: 'แผนการทำงาน',
+      viewList: 'ตารางงาน',
+      viewGantt: 'แผนภูมิ Gantt',
+      colNo: '#',
+      colTask: 'รายการงาน',
+      colStart: 'เริ่ม',
+      colEnd: 'สิ้นสุด',
+      colStatus: 'สถานะ',
+      colProgress: 'ความคืบหน้า',
+      colAction: 'จัดการ',
+      btnAdd: 'เพิ่มรายการ',
+      statusPending: 'รอดำเนินการ',
+      statusInProgress: 'กำลังทำ',
+      statusCompleted: 'เสร็จสิ้น',
+      statusDelayed: 'ล่าช้า',
+      noteTitle: 'หมายเหตุ:',
+      noteText: 'วันที่สำหรับรายการที่ 10-14 เป็นการประมาณการเพื่อแสดงผล',
+      confirmDelete: 'ยืนยันการลบรายการนี้?',
+      newJob: 'งานใหม่',
+      days: 'วัน',
+      print: 'พิมพ์ / PDF',
+      labelProject: 'ชื่อโครงการ',
+      labelOwner: 'เจ้าของโครงการ',
+      labelLocation: 'สถานที่',
+      placeholderProject: 'ระบุชื่อโครงการ...',
+      placeholderOwner: 'ระบุชื่อเจ้าของ...',
+      placeholderLocation: 'ระบุสถานที่...',
+      printHint: 'แนะนำให้ตั้งค่าการพิมพ์เป็นแนวนอน (Landscape)',
+      settings: 'ตั้งค่ากำหนดการ',
+      labelStartDate: 'วันที่เริ่มโครงการ',
+      labelEndDate: 'วันที่สิ้นสุดโครงการ',
+      close: 'ปิด'
+    },
+    en: {
+      title: 'Work Plan',
+      viewList: 'Table View',
+      viewGantt: 'Gantt Chart',
+      colNo: '#',
+      colTask: 'Task Name',
+      colStart: 'Start',
+      colEnd: 'End',
+      colStatus: 'Status',
+      colProgress: 'Progress',
+      colAction: 'Action',
+      btnAdd: 'Add Task',
+      statusPending: 'Pending',
+      statusInProgress: 'In Progress',
+      statusCompleted: 'Completed',
+      statusDelayed: 'Delayed',
+      noteTitle: 'Note:',
+      noteText: 'Dates for items 10-14 are estimated for visualization.',
+      confirmDelete: 'Are you sure you want to delete this task?',
+      newJob: 'New Task',
+      days: 'days',
+      print: 'Print / PDF',
+      labelProject: 'Project Name',
+      labelOwner: 'Owner',
+      labelLocation: 'Location',
+      placeholderProject: 'Enter project name...',
+      placeholderOwner: 'Enter owner name...',
+      placeholderLocation: 'Enter location...',
+      printHint: 'Landscape orientation recommended',
+      settings: 'Schedule Settings',
+      labelStartDate: 'Project Start Date',
+      labelEndDate: 'Project End Date',
+      close: 'Close'
+    },
+    zh: {
+      title: '工作计划',
+      viewList: '列表视图',
+      viewGantt: '甘特图',
+      colNo: '#',
+      colTask: '任务名称',
+      colStart: '开始日期',
+      colEnd: '结束日期',
+      colStatus: '状态',
+      colProgress: '进度',
+      colAction: '操作',
+      btnAdd: '添加任务',
+      statusPending: '待处理',
+      statusInProgress: '进行中',
+      statusCompleted: '已完成',
+      statusDelayed: '延误',
+      noteTitle: '注意：',
+      noteText: '第10-14项的日期为预估日期，仅供展示。',
+      confirmDelete: '确定要删除此任务吗？',
+      newJob: '新任务',
+      days: '天',
+      print: '打印 / PDF',
+      labelProject: '项目名称',
+      labelOwner: '业主',
+      labelLocation: '地点',
+      placeholderProject: '输入项目名称...',
+      placeholderOwner: '输入业主名称...',
+      placeholderLocation: '输入地点...',
+      printHint: '建议使用横向打印',
+      settings: '进度设置',
+      labelStartDate: '项目开始日期',
+      labelEndDate: '项目结束日期',
+      close: '关闭'
+    }
+  };
+
+  // Initial Data
+  const initialTaskData = [
+    { id: 1, th: '1. ผนังเบาด้านฝั่งรพ', en: '1. Drywall (Hospital side)', zh: '1. 干墙 (医院侧)', start: '2026-01-02', end: '2026-01-04', status: 'completed', progress: 100 },
+    { id: 2, th: '2. Support พื้น กันโยก', en: '2. Floor Support', zh: '2. 地板支撑', start: '2026-01-02', end: '2026-01-03', status: 'completed', progress: 100 },
+    { id: 3, th: '3. Support Hanger งานประปาภายใน', en: '3. Hanger Support (Plumbing)', zh: '3. 吊架支撑 (内部管道)', start: '2026-01-02', end: '2026-01-03', status: 'completed', progress: 100 },
+    { id: 4, th: '4. งานทาสีภายในอาคาร', en: '4. Interior Painting', zh: '4. 室内粉刷', start: '2026-01-07', end: '2026-01-10', status: 'pending', progress: 0 },
+    { id: 5, th: '5. ปิดผนังเบา ฝั่งหน่วยไตเทียม', en: '5. Close Drywall (Dialysis)', zh: '5. 关闭干墙 (透析单元)', start: '2026-01-06', end: '2026-01-08', status: 'pending', progress: 0 },
+    { id: 6, th: '6. งานเดินระบบไฟฟ้า', en: '6. Electrical System', zh: '6. 电气系统', start: '2026-01-07', end: '2026-01-12', status: 'pending', progress: 0 },
+    { id: 7, th: '7. งานเดินระบบ สุขาภิบาลภายนอก', en: '7. Exterior Sanitation', zh: '7. 外部卫生系统', start: '2026-01-05', end: '2026-01-11', status: 'in-progress', progress: 30 },
+    { id: 8, th: '8. งานขุดดิน งานโครงสร้างรับถังบำบัด', en: '8. Excavation & Structure', zh: '8. 开挖与结构', start: '2026-01-12', end: '2026-01-25', status: 'pending', progress: 0 },
+    { id: 9, th: '9. วางถังบำบัด เชื่อมท่อ ระบบสูบน้ำ', en: '9. Septic Tank & Pump', zh: '9. 化粪池与泵系统', start: '2026-01-26', end: '2026-01-31', status: 'pending', progress: 0 },
+    { id: 10, th: '10. กลบดิน ปรับพื้น', en: '10. Backfill & Grading', zh: '10. 回填与平整', start: '2026-01-28', end: '2026-01-30', status: 'pending', progress: 0 },
+    { id: 11, th: '11. งานพื้นทางเข้าอาคาร ภายนอก Slope', en: '11. Entrance Floor & Slope', zh: '11. 入口地板与坡度', start: '2026-01-29', end: '2026-01-31', status: 'pending', progress: 0 },
+    { id: 12, th: '12. งานทาสีภายนอก', en: '12. Exterior Painting', zh: '12. 外部粉刷', start: '2026-01-20', end: '2026-01-30', status: 'pending', progress: 0 },
+    { id: 13, th: '13. Big Cleaning', en: '13. Big Cleaning', zh: '13. 大扫除', start: '2026-01-31', end: '2026-01-31', status: 'pending', progress: 0 },
+    { id: 14, th: '14. ตกแต่งภายใน เฟอร์นิเจอร์ แอร์', en: '14. Interior Decor & AC', zh: '14. 室内装饰与空调', start: '2026-01-28', end: '2026-01-31', status: 'pending', progress: 0 },
+  ];
+
+  // Load initial tasks
+  const [tasks, setTasks] = useState(initialTaskData.map(t => ({...t, name: t[lang]})));
+
+  useEffect(() => {
+    setTasks(prevTasks => prevTasks.map(task => {
+      const original = initialTaskData.find(ot => ot.id === task.id);
+      if (original) {
+        return { ...task, name: original[lang] };
+      }
+      return task;
+    }));
+  }, [lang]);
+
+  // --- Helpers ---
+  const updateTask = (id, field, value) => {
+    setTasks(tasks.map(task => 
+      task.id === id ? { ...task, [field]: value } : task
+    ));
+  };
+
+  const addTask = () => {
+    const newId = Math.max(...tasks.map(t => t.id), 0) + 1;
+    setTasks([...tasks, {
+      id: newId,
+      name: `${t[lang].newJob} ${newId}`,
+      start: projectInfo.startDate,
+      end: projectInfo.startDate,
+      status: 'pending',
+      progress: 0
+    }]);
+  };
+
+  const deleteTask = (id) => {
+    if (confirm(t[lang].confirmDelete)) {
+      setTasks(tasks.filter(t => t.id !== id));
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const getDuration = (start, end) => {
+    const diff = new Date(end) - new Date(start);
+    return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  // Generate Date Range for Gantt
+  const getDaysArray = (start, end) => {
+    const arr = [];
+    const dt = new Date(start);
+    const endDate = new Date(end);
+    while (dt <= endDate) {
+      arr.push(new Date(dt));
+      dt.setDate(dt.getDate() + 1);
+    }
+    return arr;
+  };
+
+  const timelineDates = getDaysArray(projectInfo.startDate, projectInfo.endDate);
+  const totalProjectDays = timelineDates.length;
+
+  // --- Styles & Theme ---
+  const theme = {
+    bg: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
+    card: isDarkMode ? 'bg-gray-800' : 'bg-white',
+    text: isDarkMode ? 'text-gray-100' : 'text-gray-900',
+    textSecondary: isDarkMode ? 'text-gray-400' : 'text-gray-600',
+    border: isDarkMode ? 'border-gray-700' : 'border-gray-200',
+    input: isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900',
+    header: isDarkMode ? 'bg-blue-950' : 'bg-blue-900',
+    hover: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-blue-50',
+    th: isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600',
+    gridLine: isDarkMode ? 'border-gray-700' : 'border-gray-100',
+  };
+
+  const getStatusColor = (status) => {
+    if (isDarkMode) {
+       switch(status) {
+        case 'completed': return 'bg-green-900/50 text-green-300 border-green-800';
+        case 'in-progress': return 'bg-blue-900/50 text-blue-300 border-blue-800';
+        case 'delayed': return 'bg-red-900/50 text-red-300 border-red-800';
+        default: return 'bg-gray-700 text-gray-400 border-gray-600';
+      }
+    }
+    switch(status) {
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'delayed': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getBarColor = (status) => {
+    switch(status) {
+      case 'completed': return 'bg-green-500';
+      case 'in-progress': return 'bg-blue-500';
+      case 'delayed': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+     switch(status) {
+      case 'completed': return t[lang].statusCompleted;
+      case 'in-progress': return t[lang].statusInProgress;
+      case 'delayed': return t[lang].statusDelayed;
+      default: return t[lang].statusPending;
+    }
+  };
+
+  const ganttBgPattern = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSJ0cmFuc3BhcmVudCIvPgo8cGF0aCBkPSJNMCAwaDR2NEgweiIgZmlsbD0iY3VycmVudENvbG9yIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz48L3N2Zz4=`;
+
+  return (
+    <div className={`min-h-screen transition-colors duration-300 ${theme.bg} ${theme.text} font-sans text-sm md:text-base print:bg-white print:text-black`}>
+      
+      {/* CSS for Print */}
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 0.5cm; }
+          .no-print { display: none !important; }
+          .print-full-width { width: 100% !important; max-width: none !important; }
+          .print-black-text { color: black !important; }
+          .print-white-bg { background-color: white !important; }
+          .print-border { border-color: #ccc !important; }
+          
+          /* Force background colors */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          
+          /* CRITICAL FIX: Allow content to flow to next pages */
+          html, body, #root, .min-h-screen { 
+            height: auto !important; 
+            overflow: visible !important; 
+            background: white !important;
+          }
+
+          /* Main container overrides */
+          .print-overflow-visible { overflow: visible !important; height: auto !important; }
+          
+          /* Reset inputs for print */
+          input, select { 
+            border: none !important; 
+            background: transparent !important; 
+            padding: 0 !important;
+            color: black !important;
+            appearance: none;
+            box-shadow: none !important;
+          }
+          
+          /* Hide scrollbars but allow content expansion */
+          ::-webkit-scrollbar { display: none; }
+          
+          /* Ensure Gantt grid lines are visible */
+          .border-dashed { border-style: dashed !important; border-color: #ddd !important; }
+          
+          /* Custom overrides */
+          .bg-blue-900, .bg-blue-950 { background-color: white !important; color: black !important; border-bottom: 2px solid black; }
+        }
+      `}</style>
+
+      {/* Main Container: Added print:overflow-visible and print:h-auto to prevent cutting off */}
+      <div className={`max-w-7xl mx-auto ${theme.card} md:rounded-xl shadow-lg overflow-hidden transition-colors duration-300 min-h-screen md:min-h-0 print-full-width print:shadow-none print-white-bg print:overflow-visible print:h-auto`}>
+        
+        {/* Header Section */}
+        <div className={`${theme.header} text-white p-4 md:p-6 transition-colors duration-300 print:p-0 print:mb-4`}>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            
+            {/* Title Area */}
+            <div className="flex-1 w-full md:w-auto">
+              <div className="flex justify-between items-center md:block">
+                <h1 className="text-xl md:text-2xl font-bold print-black-text">{t[lang].title}</h1>
+                <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="md:hidden p-1 rounded hover:bg-white/10 no-print">
+                  {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Controls Area (Hidden on Print) */}
+            <div className={`flex flex-col md:flex-row gap-3 w-full md:w-auto no-print ${showMobileMenu ? 'block' : 'hidden md:flex'}`}>
+              
+              {/* Language Switcher */}
+              <div className="flex bg-blue-800 rounded-lg p-1 self-start md:self-center">
+                {['th', 'en', 'zh'].map(l => (
+                  <button 
+                    key={l}
+                    onClick={() => setLang(l)} 
+                    className={`px-3 py-1 rounded-md text-xs md:text-sm font-bold transition-all ${lang === l ? 'bg-white text-blue-900' : 'text-blue-100 hover:text-white'}`}
+                  >
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              {/* View Toggles */}
+              <div className="flex gap-2 self-start md:self-center">
+                 <button onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-lg flex items-center gap-2 transition-colors text-xs md:text-sm ${viewMode === 'list' ? 'bg-white text-blue-900 font-bold' : 'bg-blue-800 hover:bg-blue-700'}`}>
+                  <LayoutList size={16} />
+                  {t[lang].viewList}
+                </button>
+                <button onClick={() => setViewMode('gantt')} className={`px-3 py-2 rounded-lg flex items-center gap-2 transition-colors text-xs md:text-sm ${viewMode === 'gantt' ? 'bg-white text-blue-900 font-bold' : 'bg-blue-800 hover:bg-blue-700'}`}>
+                  <BarChart3 size={16} />
+                  {t[lang].viewGantt}
+                </button>
+              </div>
+
+               {/* Dark Mode Toggle */}
+               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-lg bg-blue-800 hover:bg-blue-700 transition-colors self-start md:self-center" title="Toggle Dark Mode">
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+
+                {/* Schedule Settings Button */}
+                <button 
+                  onClick={() => setShowSettings(!showSettings)} 
+                  className={`px-3 py-2 rounded-lg flex items-center gap-2 transition-colors self-start md:self-center font-bold ${showSettings ? 'bg-blue-600 text-white' : 'bg-blue-800 hover:bg-blue-700 text-white'}`}
+                  title={t[lang].settings}
+                >
+                  <CalendarRange size={16} />
+                </button>
+
+                {/* Print Button */}
+                <button onClick={handlePrint} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg flex items-center gap-2 transition-colors self-start md:self-center font-bold">
+                  <Printer size={16} />
+                  {t[lang].print}
+                </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Body: Added print:overflow-visible and print:h-auto */}
+        <div className="p-2 md:p-6 overflow-hidden print:overflow-visible print:p-0 print:h-auto">
+          
+          {/* Settings Panel (Collapsible) */}
+          {showSettings && (
+             <div className={`mb-4 p-4 rounded-lg border-2 border-blue-200 bg-blue-50 text-blue-900 shadow-inner no-print transition-all duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-200' : ''}`}>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold flex items-center gap-2"><Settings size={18}/> {t[lang].settings}</h3>
+                  <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-black/10 rounded"><X size={18}/></button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold">{t[lang].labelStartDate}</label>
+                    <input 
+                      type="date" 
+                      value={projectInfo.startDate}
+                      onChange={(e) => setProjectInfo({...projectInfo, startDate: e.target.value})}
+                      className={`w-full p-2 rounded border ${theme.input}`}
+                    />
+                  </div>
+                   <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold">{t[lang].labelEndDate}</label>
+                    <input 
+                      type="date" 
+                      value={projectInfo.endDate}
+                      onChange={(e) => setProjectInfo({...projectInfo, endDate: e.target.value})}
+                      className={`w-full p-2 rounded border ${theme.input}`}
+                    />
+                  </div>
+                </div>
+             </div>
+          )}
+
+          {/* Project Details Section */}
+          <div className={`mb-6 p-4 rounded-lg border ${theme.border} ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} print:bg-white print:border-none print:p-0 print:mb-2`}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2">
+              <div className="flex flex-col gap-1">
+                <label className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${theme.textSecondary} print-black-text`}>
+                  <FileText size={14} className="no-print" />
+                  {t[lang].labelProject}
+                </label>
+                <input 
+                  type="text" 
+                  value={projectInfo.name}
+                  onChange={(e) => setProjectInfo({...projectInfo, name: e.target.value})}
+                  placeholder={t[lang].placeholderProject}
+                  className={`w-full p-2 rounded border ${theme.input} focus:ring-2 focus:ring-blue-500 focus:outline-none print:text-lg print:font-bold`}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${theme.textSecondary} print-black-text`}>
+                  <User size={14} className="no-print" />
+                  {t[lang].labelOwner}
+                </label>
+                <input 
+                  type="text" 
+                  value={projectInfo.owner}
+                  onChange={(e) => setProjectInfo({...projectInfo, owner: e.target.value})}
+                  placeholder={t[lang].placeholderOwner}
+                  className={`w-full p-2 rounded border ${theme.input} focus:ring-2 focus:ring-blue-500 focus:outline-none print:text-lg`}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${theme.textSecondary} print-black-text`}>
+                  <MapPin size={14} className="no-print" />
+                  {t[lang].labelLocation}
+                </label>
+                <input 
+                  type="text" 
+                  value={projectInfo.location}
+                  onChange={(e) => setProjectInfo({...projectInfo, location: e.target.value})}
+                  placeholder={t[lang].placeholderLocation}
+                  className={`w-full p-2 rounded border ${theme.input} focus:ring-2 focus:ring-blue-500 focus:outline-none print:text-lg`}
+                />
+              </div>
+              {/* Show Dates in Print Mode only */}
+              <div className="hidden print:flex flex-col gap-1 col-span-3 mt-2 border-t pt-2">
+                 <p className="text-sm">
+                   <span className="font-bold">{t[lang].labelStartDate}:</span> {new Date(projectInfo.startDate).toLocaleDateString()} 
+                   <span className="mx-2">-</span> 
+                   <span className="font-bold">{t[lang].labelEndDate}:</span> {new Date(projectInfo.endDate).toLocaleDateString()}
+                 </p>
+              </div>
+            </div>
+          </div>
+
+          {viewMode === 'list' ? (
+            // --- TABLE VIEW ---
+            <div className="overflow-x-auto rounded-lg border border-opacity-20 pb-20 md:pb-0 print:border-none print:overflow-visible print:h-auto" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+              <table className="w-full border-collapse min-w-[800px] print:min-w-0">
+                <thead>
+                  <tr className={`${theme.th} text-left transition-colors duration-300 print:bg-gray-100 print:text-black print:border-b-2 print:border-black`}>
+                    <th className="p-3 w-12 text-center rounded-tl-lg print:border print:border-gray-300">{t[lang].colNo}</th>
+                    <th className="p-3 min-w-[200px] print:border print:border-gray-300">{t[lang].colTask}</th>
+                    <th className="p-3 w-36 print:border print:border-gray-300">{t[lang].colStart}</th>
+                    <th className="p-3 w-36 print:border print:border-gray-300">{t[lang].colEnd}</th>
+                    <th className="p-3 w-32 print:border print:border-gray-300">{t[lang].colStatus}</th>
+                    <th className="p-3 w-20 text-center print:border print:border-gray-300">{t[lang].colProgress}</th>
+                    <th className="p-3 w-16 text-center rounded-tr-lg no-print">{t[lang].colAction}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y print:border-t-0" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+                  {tasks.map((task, index) => (
+                    <tr key={task.id} className={`${theme.hover} transition-colors duration-200 print:break-inside-avoid print:border-b print:border-gray-300`}>
+                      <td className={`p-3 text-center font-mono ${theme.textSecondary} print:border-r print:border-gray-300 print:text-black`}>{index + 1}</td>
+                      <td className="p-3 print:border-r print:border-gray-300">
+                        <input 
+                          type="text" 
+                          value={task.name}
+                          onChange={(e) => updateTask(task.id, 'name', e.target.value)}
+                          className={`w-full bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none p-1 ${theme.text} print:text-black`}
+                        />
+                      </td>
+                      <td className="p-3 print:border-r print:border-gray-300">
+                        <input 
+                          type="date" 
+                          value={task.start}
+                          onChange={(e) => updateTask(task.id, 'start', e.target.value)}
+                          className={`w-full rounded p-1 text-sm ${theme.input} print:text-black print:bg-transparent`}
+                        />
+                      </td>
+                      <td className="p-3 print:border-r print:border-gray-300">
+                        <input 
+                          type="date" 
+                          value={task.end}
+                          onChange={(e) => updateTask(task.id, 'end', e.target.value)}
+                          className={`w-full rounded p-1 text-sm ${theme.input} print:text-black print:bg-transparent`}
+                        />
+                      </td>
+                      <td className="p-3 print:border-r print:border-gray-300">
+                         {/* Display text only on print for cleaner look */}
+                        <div className="hidden print:block text-sm">
+                           {getStatusLabel(task.status)}
+                        </div>
+                        <select 
+                          value={task.status}
+                          onChange={(e) => updateTask(task.id, 'status', e.target.value)}
+                          className={`w-full p-1 rounded border text-sm appearance-none cursor-pointer ${getStatusColor(task.status)} print:hidden`}
+                        >
+                          <option value="pending" className="bg-white text-black">{t[lang].statusPending}</option>
+                          <option value="in-progress" className="bg-white text-black">{t[lang].statusInProgress}</option>
+                          <option value="completed" className="bg-white text-black">{t[lang].statusCompleted}</option>
+                          <option value="delayed" className="bg-white text-black">{t[lang].statusDelayed}</option>
+                        </select>
+                      </td>
+                      <td className="p-3 text-center print:border-r print:border-gray-300">
+                        <div className="flex items-center justify-center gap-1">
+                          <input 
+                            type="number" 
+                            min="0" max="100"
+                            value={task.progress}
+                            onChange={(e) => updateTask(task.id, 'progress', parseInt(e.target.value))}
+                            className={`w-12 text-center border rounded p-1 ${theme.input} print:text-black print:bg-transparent print:w-auto`}
+                          />
+                          <span className="text-xs text-gray-500 print:text-black">%</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center no-print">
+                        <button 
+                          onClick={() => deleteTask(task.id)}
+                          className="text-red-400 hover:text-red-600 p-2 rounded hover:bg-red-500/10 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-4 px-2 no-print">
+                <button onClick={addTask} className="w-full md:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm">
+                  <Plus size={18} />
+                  {t[lang].btnAdd}
+                </button>
+              </div>
+            </div>
+          ) : (
+            // --- GANTT CHART VIEW (Dynamic) ---
+            <div className={`overflow-x-auto border rounded-lg ${theme.border} pb-20 md:pb-0 print:border-gray-300 print:pb-0 print:overflow-visible print:h-auto`}>
+              <div className={`min-w-[1000px] ${theme.card} print:bg-white print:w-full print:min-w-0`}>
+                {/* Timeline Header */}
+                <div className={`flex border-b ${theme.border} ${theme.th} print:bg-gray-100 print:text-black print:border-gray-300`}>
+                  <div className={`w-48 md:w-64 p-3 border-r ${theme.border} font-bold sticky left-0 z-20 shadow-sm ${theme.th} print:bg-gray-100 print:text-black print:static print:shadow-none print:border-gray-300`}>
+                    {t[lang].colTask}
+                  </div>
+                  <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${totalProjectDays}, minmax(30px, 1fr))` }}>
+                    {timelineDates.map((date, i) => (
+                      <div key={i} className={`text-center py-2 text-xs border-r ${theme.gridLine} ${[0, 6].includes(date.getDay()) ? 'bg-opacity-10 bg-gray-500 print:bg-gray-200' : ''} print:border-gray-300 print:text-black`}>
+                        {date.getDate()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timeline Body */}
+                {tasks.map((task) => {
+                  const taskStart = new Date(task.start);
+                  const taskEnd = new Date(task.end);
+                  const projectStart = new Date(projectInfo.startDate);
+                  
+                  // Calculate position and width relative to project timeline
+                  const daysFromStart = (taskStart - projectStart) / (1000 * 60 * 60 * 24);
+                  const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24) + 1;
+                  
+                  // Check if task is within visible range (even partially)
+                  const isVisible = taskEnd >= projectStart && taskStart <= new Date(projectInfo.endDate);
+
+                  return (
+                    <div key={task.id} className={`flex border-b ${theme.border} ${theme.hover} group print:border-gray-300 print:bg-white print:break-inside-avoid`}>
+                      <div className={`w-48 md:w-64 p-2 border-r ${theme.border} text-sm truncate flex items-center justify-between sticky left-0 z-10 px-4 transition-colors duration-200 ${isDarkMode ? 'bg-gray-800 group-hover:bg-gray-700' : 'bg-white group-hover:bg-blue-50'} print:static print:bg-white print:border-gray-300 print:text-black`}>
+                        <span title={task.name}>{task.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor(task.status)} print:border-black print:text-black print:bg-gray-100`}>
+                          {task.progress}%
+                        </span>
+                      </div>
+                      
+                      {/* Gantt Grid Background */}
+                      <div 
+                        className="flex-1 grid relative h-10 items-center"
+                        style={{ 
+                          gridTemplateColumns: `repeat(${totalProjectDays}, minmax(30px, 1fr))`,
+                          backgroundImage: `url('${ganttBgPattern}')`,
+                          color: isDarkMode ? '#ffffff' : '#000000'
+                        }}
+                      >
+                        {/* Weekend Columns */}
+                        {timelineDates.map((date, i) => (
+                          <div key={i} className={`h-full border-r border-dashed ${theme.gridLine} ${[0, 6].includes(date.getDay()) ? 'bg-gray-500/10 print:bg-gray-200' : ''} print:border-gray-300`}></div>
+                        ))}
+
+                        {/* The Bar */}
+                        {isVisible && daysFromStart + duration > 0 && (
+                          <div 
+                            className={`absolute h-6 rounded shadow-sm flex items-center justify-center text-[10px] text-white overflow-hidden z-10 ${getBarColor(task.status)} print:print-color-adjust-exact`}
+                            style={{
+                              left: `calc(${Math.max(0, daysFromStart) * (100/totalProjectDays)}% + 2px)`,
+                              width: `calc(${Math.min(duration, totalProjectDays - daysFromStart) * (100/totalProjectDays)}% - 4px)`
+                            }}
+                          >
+                             {duration > 1 && <span className="drop-shadow-md whitespace-nowrap px-1">{Math.ceil(duration)} {t[lang].days}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          <div className={`mt-6 p-4 rounded-lg text-sm flex gap-2 border ${isDarkMode ? 'bg-yellow-900/20 border-yellow-700 text-yellow-200' : 'bg-yellow-50 border-yellow-200 text-yellow-800'} no-print`}>
+            <span className="font-bold">{t[lang].noteTitle}</span>
+            <span>{t[lang].noteText}</span>
+          </div>
+
+          {/* Footer / Credits */}
+          <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 mt-8 border-t pt-4 print:text-black print:mt-4">
+             <div className="flex flex-col md:flex-row gap-1 md:gap-4 items-center">
+                <span className="font-bold">Credit by nothng9</span>
+                <span>Tel: 088-914-9959</span>
+             </div>
+             <div className="hidden print:block">
+                <span>Printed: {new Date().toLocaleDateString('th-TH')}</span>
+             </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ConstructionSchedule;
